@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "./components/ui/button";
 import { Card, CardContent } from "./components/ui/card";
-import { UserDashboard } from "./components/UserDashboard";
+import UserDashboard from "./components/UserDashboard";
 import { CompanyDashboard } from "./components/CompanyDashboard";
 import { User, Building2, Sparkles } from "lucide-react";
 
