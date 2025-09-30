@@ -2,6 +2,10 @@
 
 A full-stack application connecting companies with learners through task-based micro-apprenticeships. The platform uses AI-powered milestone generation and automated code review to guide learners through real-world projects.
 
+<img width="1433" height="681" alt="Screenshot 2025-09-30 at 4 43 04 PM" src="https://github.com/user-attachments/assets/eb2235dd-b6a7-45bb-bb6f-c93c6305aae0" />
+<img width="1315" height="378" alt="Screenshot 2025-09-30 at 4 44 21 PM" src="https://github.com/user-attachments/assets/c81e6835-8658-4ecd-9d7f-d383dc8c01fb" />
+
+
 ## Features
 
 - **Company Dashboard**: Create and manage task-based apprenticeships  
