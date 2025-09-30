@@ -303,7 +303,7 @@ export default function UserDashboard() {
               />
             </div>
             <div>
-              <Label>Your ID</Label>
+              <Label>Your Username</Label>
               <Input
                 placeholder="e.g., user_123"
                 value={idInput}
