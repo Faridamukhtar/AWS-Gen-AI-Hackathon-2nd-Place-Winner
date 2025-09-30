@@ -11,7 +11,6 @@ import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Textarea } from "./ui/textarea";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { CheckCircle, Upload, Brain, ChevronLeft, Lock } from "lucide-react";
 
@@ -22,6 +21,8 @@ const AGENT_API =
   "https://5s3kpyaws4.execute-api.us-west-2.amazonaws.com/dev/agent-milestones";
 const REVIEW_API =
   "https://5s3kpyaws4.execute-api.us-west-2.amazonaws.com/dev/get-feedback";
+const SUBMIT_API =
+  "https://5s3kpyaws4.execute-api.us-west-2.amazonaws.com/dev/submit-solution";
 
 /* ====== Mock User Profile ====== */
 const userProfile = {
@@ -36,6 +37,7 @@ const userProfile = {
 
 /* ====== Types ====== */
 type Task = {
+  manara: any;
   id: string | number;
   title: string;
   description?: string;
@@ -67,6 +69,7 @@ export default function UserDashboard() {
 
   const [fileByM, setFileByM] = useState<Record<string, File | null>>({});
   const [finalFile, setFinalFile] = useState<File | null>(null);
+  const [finalScore, setFinalScore] = useState<number | null>(null);
 
   /* === Fetch all tasks === */
   useEffect(() => {
@@ -146,6 +149,34 @@ export default function UserDashboard() {
     }
   };
 
+  /* === Submit Project to Company === */
+  const handleCompanySubmit = async () => {
+    if (!selectedTask) return;
+
+    const avgScore =
+      milestones.reduce((acc, m) => acc + (m.aiScore || 0), 0) /
+      milestones.length;
+
+    const payload = {
+      userId: userProfile.id,
+      taskId: selectedTask.manara,
+      totalScore: avgScore,
+    };
+
+    try {
+      const res = await fetch(SUBMIT_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      setAiMsg(`📨 Project submitted to company: ${data.message}`);
+    } catch (err: any) {
+      setAiMsg(`❌ Submission failed: ${err.message}`);
+    }
+  };
+
   /* === Ask for AI Review (milestone or final) === */
   const handleReview = async (type: "milestone" | "final", id?: string) => {
     if (!selectedTask) return;
@@ -157,8 +188,14 @@ export default function UserDashboard() {
       fileContent = btoa(String.fromCharCode(...new Uint8Array(buffer)));
     }
 
-    // Use the actual task description from the frontend
-    const description = selectedTask.description || selectedTask.title || "";
+    // ✅ Use milestone.action as description for milestone reviews
+    let description = selectedTask.description || selectedTask.title || "";
+    if (type === "milestone" && id) {
+      const milestone = milestones.find((m) => m.id === id);
+      if (milestone) {
+        description = milestone.action;
+      }
+    }
 
     const payload = {
       userId: userProfile.id,
@@ -187,7 +224,7 @@ export default function UserDashboard() {
                   ...m,
                   feedback,
                   aiScore,
-                  completed: aiScore >= 80, // ✅ auto-complete
+                  completed: aiScore >= 80, // ✅ auto-complete if score good
                 }
               : m
           )
@@ -195,6 +232,7 @@ export default function UserDashboard() {
       }
 
       if (type === "final") {
+        setFinalScore(aiScore);
         setAiMsg(
           `✅ Final review complete: Score ${aiScore}/100 — ${feedback}`
         );
@@ -224,7 +262,9 @@ export default function UserDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Welcome back, {userProfile.name}</h1>
+          <h1 className="text-3xl font-bold">
+            Welcome back, {userProfile.name}
+          </h1>
           {selectedTask ? (
             <p className="text-muted-foreground">
               Viewing: {selectedTask.title}
@@ -265,7 +305,7 @@ export default function UserDashboard() {
         </div>
       )}
 
-      {/* Milestones View */}
+      {/* Milestones */}
       {selectedTask && (
         <>
           <Button variant="outline" onClick={() => setSelectedTask(null)}>
@@ -288,11 +328,12 @@ export default function UserDashboard() {
             </CardContent>
           </Card>
 
-          {milestonesLoading && <p className="text-center py-4">Loading milestones…</p>}
+          {milestonesLoading && (
+            <p className="text-center py-4">Loading milestones…</p>
+          )}
 
           {milestones.map((m, idx) => {
             const isLocked = idx > 0 && !milestones[idx - 1].completed;
-
             return (
               <Card
                 key={m.id}
@@ -313,13 +354,12 @@ export default function UserDashboard() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-sm">{m.action}</p>
-
                   {!isLocked && (
                     <div className="text-sm text-muted-foreground">
-                      <span className="font-medium">Recommended:</span> {m.recommendedResources.join(", ")}
+                      <span className="font-medium">Recommended:</span>{" "}
+                      {m.recommendedResources.join(", ")}
                     </div>
                   )}
-
                   {m.feedback && (
                     <div className="p-3 bg-blue-50 rounded-lg space-y-2">
                       <div className="flex items-center justify-between">
@@ -343,7 +383,6 @@ export default function UserDashboard() {
                       <p className="text-sm text-blue-800">{m.feedback}</p>
                     </div>
                   )}
-
                   {!m.completed && !isLocked && (
                     <>
                       <div className="space-y-2">
@@ -357,24 +396,17 @@ export default function UserDashboard() {
                             }))
                           }
                         />
-                        {fileByM[m.id] && (
-                          <p className="text-sm text-muted-foreground">
-                            Selected: {fileByM[m.id]!.name}
-                          </p>
-                        )}
                       </div>
                       <Button onClick={() => handleReview("milestone", m.id)}>
                         <Upload className="w-4 h-4 mr-2" /> Submit for AI Review
                       </Button>
                     </>
                   )}
-
                   {m.completed && (
                     <div className="flex items-center gap-2 text-green-600 font-medium">
                       <CheckCircle className="w-4 h-4" /> Completed
                     </div>
                   )}
-
                   {isLocked && !m.completed && (
                     <p className="text-sm text-gray-500 italic">
                       🔒 Complete the previous milestone to unlock this step.
@@ -385,13 +417,13 @@ export default function UserDashboard() {
             );
           })}
 
-          {/* Final Project Submission */}
+          {/* Final Project */}
           {milestones.length > 0 && (
             <Card className="mt-6">
               <CardHeader>
                 <CardTitle>Final Project Submission</CardTitle>
                 <CardDescription>
-                  Submit your complete project for final review
+                  Submit your complete project for AI review first
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -410,25 +442,40 @@ export default function UserDashboard() {
                           setFinalFile(e.target.files?.[0] || null)
                         }
                       />
-                      {finalFile && (
-                        <p className="text-sm text-muted-foreground">
-                          Selected: {finalFile.name}
-                        </p>
-                      )}
                     </div>
-                    <Button onClick={() => handleReview("final")} className="w-full">
-                      <Upload className="w-4 h-4 mr-2" /> Submit Final Project for AI Review
+                    <Button
+                      onClick={() => handleReview("final")}
+                      className="w-full"
+                    >
+                      <Upload className="w-4 h-4 mr-2" /> Submit Final Project
+                      for AI Review
                     </Button>
                   </>
                 )}
               </CardContent>
             </Card>
           )}
+
+          {/* Submit to Company */}
+          {finalScore !== null && (
+            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-800">
+                Final AI Score: {finalScore}/100
+              </p>
+              <Button
+                className="w-full mt-2 bg-green-600 text-white"
+                onClick={handleCompanySubmit}
+                disabled={finalScore < 80}
+              >
+                🚀 Submit Project to Company
+              </Button>
+            </div>
+          )}
         </>
       )}
 
       {aiMsg && (
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mt-4">
           <p className="text-sm text-blue-800">{aiMsg}</p>
         </div>
       )}
