@@ -573,7 +573,7 @@ export default function UserDashboard() {
 
                         {finalScore >= 80 ? (
                           <Button
-                            className="w-full bg-green-600 hover:bg-green-700 text-white"
+                            className="w-full bg-green-600 hover:bg-green-700 text-black"
                             onClick={handleCompanySubmit}
                           >
                             Submit Project to Company
