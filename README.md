@@ -1,4 +1,4 @@
-# Micro-Apprenticeship Platform
+# Micro-Apprenticeship Platform [2nd Place Winner]
 
 A full-stack application connecting companies with learners through task-based micro-apprenticeships. The platform uses AI-powered milestone generation and automated code review to guide learners through real-world projects.
 
